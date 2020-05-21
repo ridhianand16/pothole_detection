@@ -167,7 +167,7 @@ class MyBodyState extends State<BodyState> {
         onPressed: selectFromImagePicker,
       ),
       body: Stack(
-        //children: stackChildren,
+        children: stackChildren,
       ),
     );
   }
