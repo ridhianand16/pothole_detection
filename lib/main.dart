@@ -54,7 +54,6 @@ class MyBodyState extends State<BodyState> {
       else
       {
         res = await Tflite.loadModel(model: "assets/model/detect.tflite");
-      
       }
       print(res);
     }
