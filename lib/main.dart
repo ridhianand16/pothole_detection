@@ -54,12 +54,11 @@ class MyBodyState extends State<BodyState> {
       } else {
         res = await Tflite.loadModel(
             model: "assets/model/detect.tflite",
-            labels: "assets/model/ssdlabels.txt"
-            );
+            labels: "assets/model/ssdlabels.txt");
       }
       print(res);
-    } on PlatformException {
-      print("Failed to load model");
+    } on PlatformException catch (e) {
+      print('error caught: $e');
     }
   }
 
@@ -83,7 +82,9 @@ class MyBodyState extends State<BodyState> {
 
   potholeSSD(File image) async {
     var recognition = await Tflite.detectObjectOnImage(
-        path: image.path, numResultsPerClass: 1);
+        path: image.path,
+        numResultsPerClass: 1,
+    );
     setState(() {
       _recognitions = recognition;
     });
@@ -95,9 +96,7 @@ class MyBodyState extends State<BodyState> {
       await crackUnet(image);
     } else {
       await potholeSSD(image);
-      //TODO: add the new model here;
     }
-
     FileImage(image)
         .resolve(ImageConfiguration())
         .addListener((ImageStreamListener((ImageInfo info, bool _) {
@@ -168,7 +167,7 @@ class MyBodyState extends State<BodyState> {
         onPressed: selectFromImagePicker,
       ),
       body: Stack(
-        children: stackChildren,
+        //children: stackChildren,
       ),
     );
   }
