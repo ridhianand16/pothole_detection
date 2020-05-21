@@ -47,18 +47,18 @@ class MyBodyState extends State<BodyState> {
     Tflite.close();
     try {
       String res;
-      if(model == "crack")
-      {
-        res = await Tflite.loadModel(model: "assets/model/UNet_25_Crack.tflite");
-      }
-      else
-      {
-        res = await Tflite.loadModel(model: "assets/model/detect.tflite");
+      if (model == "crack") {
+        res = await Tflite.loadModel(
+          model: "assets/model/UNet_25_Crack.tflite",
+        );
+      } else {
+        res = await Tflite.loadModel(
+            model: "assets/model/detect.tflite",
+            labels: "assets/model/ssdlabels.txt"
+            );
       }
       print(res);
-    }
-    on PlatformException
-    {
+    } on PlatformException {
       print("Failed to load model");
     }
   }
@@ -112,33 +112,25 @@ class MyBodyState extends State<BodyState> {
     });
   }
 
-  List<Widget> renderBoxes(Size screen)
-  {
-    if (_recognitions == null)
-      return [];
-    if (imageWidth == null || imageHeight == null)
-      return [];
+  List<Widget> renderBoxes(Size screen) {
+    if (_recognitions == null) return [];
+    if (imageWidth == null || imageHeight == null) return [];
 
-    double factorX =  screen.width;
-    double factorY = imageWidth/imageHeight * factorX;
+    double factorX = screen.width;
+    double factorY = imageWidth / imageHeight * factorX;
 
     Color red = Colors.red;
 
-    return _recognitions.map((re)
-    {
+    return _recognitions.map((re) {
       return Positioned(
-        left: re["rect"]["x"] * factorX,
-        top: re["rect"]["y"] * factorY,
-        width: re["rect"]["w"] * factorX,
-        height: re["rect"]["h"] * factorY,
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border.all(),
-            color: red
-            ),
-        )
-      );
-      }).toList();
+          left: re["rect"]["x"] * factorX,
+          top: re["rect"]["y"] * factorY,
+          width: re["rect"]["w"] * factorX,
+          height: re["rect"]["h"] * factorY,
+          child: Container(
+            decoration: BoxDecoration(border: Border.all(), color: red),
+          ));
+    }).toList();
   }
 
   @override

@@ -39,7 +39,7 @@ android {
     defaultConfig {
         // To do: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId "com.sssrtarp.potholedetection"
-        minSdkVersion 16
+        minSdkVersion 19
         targetSdkVersion 28
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
@@ -54,8 +54,8 @@ android {
     }
 
     aaptOptions {
-        nocompress 'tflite'
-        nocompress 'lite'
+        noCompress 'tflite'
+        noCompress 'lite'
     }
 }
 
