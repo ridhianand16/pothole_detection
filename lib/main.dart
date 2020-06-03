@@ -1,173 +1,176 @@
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
 import 'dart:io';
 
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:tflite/tflite.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:image/image.dart' as img;
-
-void main() {
-  runApp(MyApp());
-}
+void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: BodyState(),
+      title: 'Pothole and Crack Detection',
+      home: StartPage(),
     );
   }
 }
 
-class BodyState extends StatefulWidget {
+class StartPage extends StatelessWidget {
   @override
-  MyBodyState createState() => MyBodyState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.blueGrey[100],
+      body: Center(
+        child: Column(
+          children: <Widget>[
+            new GradientAppBar("Pothole and Crack Detection"),
+            new ButtonList()
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class MyBodyState extends State<BodyState> {
-  File imageActual;
-  double imageWidth, imageHeight;
-  String model = "pothole";
-  bool busy = false;
-  List _recognitions;
+class UploadPage extends StatefulWidget {
+  UploadPage({Key key, this.url}) : super(key: key);
+
+  final String url;
 
   @override
-  void initState() {
-    super.initState();
-    busy = true;
+  _UploadPageState createState() => _UploadPageState();
+}
 
-    loadModel().then((val) {
-      setState(() {
-        busy = false;
-      });
-    });
-  }
+class _UploadPageState extends State<UploadPage> {
+  Image state = Image(image: AssetImage('assets/transparent.png'),width: 1, height: 1);
 
-  loadModel() async {
-    Tflite.close();
-    try {
-      String res;
-      if (model == "crack") {
-        res = await Tflite.loadModel(
-          model: "assets/model/UNet_25_Crack.tflite",
-        );
-      } else {
-        res = await Tflite.loadModel(
-            model: "assets/model/detect.tflite",
-            labels: "assets/model/ssdlabels.txt");
-      }
-      print(res);
-    } on PlatformException catch (e) {
-      print('error caught: $e');
-    }
-  }
+  @override
+  Widget build(context) {
+    return Scaffold(
+      backgroundColor: Colors.blueGrey[100],
+      body: Center(
+        child: Column(
+          children: <Widget>[
+            new GradientAppBar("Pothole and Crack Detection"),
+            SizedBox(height: 200),
+            SizedBox(child: state, height: 200,),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+          backgroundColor: Colors.blueGrey[700],
+          child: Icon(Icons.image),
+          onPressed: () async {
+            setState(() {
+              state = Image(image: AssetImage('assets/loading.gif'));
+            });
+            File file =
+                await ImagePicker.pickImage(source: ImageSource.gallery);
 
-  selectFromImagePicker() async {
-    var image = await ImagePicker.pickImage(source: ImageSource.gallery);
-    if (image == null) return;
-    setState(() {
-      busy = true;
-    });
+            var request = http.MultipartRequest('POST', Uri.parse(widget.url));
+            request.files
+                .add(await http.MultipartFile.fromPath('image', file.path));
 
-    predictionImage(image);
-  }
+            // send
+            var response = await request.send();
+            print(response.statusCode);
 
-  crackUnet(File image) async {
-    var recognition = await Tflite.detectObjectOnImage(
-        path: image.path, numResultsPerClass: 1);
-    setState(() {
-      _recognitions = recognition;
-    });
-  }
-
-  potholeSSD(File image) async {
-    var recognition = await Tflite.detectObjectOnImage(
-        path: image.path,
-        numResultsPerClass: 1,
+            // listen for response
+            response.stream.listen((value) {
+              print(value);
+              setState(() {
+                state = Image.memory(value,fit: BoxFit.cover,);
+              });
+            });
+          }),
     );
-    setState(() {
-      _recognitions = recognition;
-    });
   }
+}
 
-  predictionImage(var image) async {
-    if (image == null) return;
-    if (model == "crack") {
-      await crackUnet(image);
-    } else {
-      await potholeSSD(image);
-    }
-    FileImage(image)
-        .resolve(ImageConfiguration())
-        .addListener((ImageStreamListener((ImageInfo info, bool _) {
-          setState(() {
-            imageWidth = info.image.width.toDouble();
-            imageHeight = info.image.height.toDouble();
-          });
-        })));
-    setState(() {
-      imageActual = image;
-      busy = false;
-    });
-  }
+class GradientAppBar extends StatelessWidget {
+  final String title;
+  final double barHeight = 66.0;
 
-  List<Widget> renderBoxes(Size screen) {
-    if (_recognitions == null) return [];
-    if (imageWidth == null || imageHeight == null) return [];
-
-    double factorX = screen.width;
-    double factorY = imageWidth / imageHeight * factorX;
-
-    Color red = Colors.red;
-
-    return _recognitions.map((re) {
-      return Positioned(
-          left: re["rect"]["x"] * factorX,
-          top: re["rect"]["y"] * factorY,
-          width: re["rect"]["w"] * factorX,
-          height: re["rect"]["h"] * factorY,
-          child: Container(
-            decoration: BoxDecoration(border: Border.all(), color: red),
-          ));
-    }).toList();
-  }
+  GradientAppBar(this.title);
 
   @override
   Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
 
-    List<Widget> stackChildren = [];
-
-    stackChildren.add(Positioned(
-      top: 0.0,
-      left: 0.0,
-      width: size.width,
-      child: imageActual == null
-          ? Text("No Image Selected")
-          : Image.file(imageActual),
-    ));
-
-    stackChildren.addAll(renderBoxes(size));
-
-    if (busy) {
-      stackChildren.add(Center(
-        child: CircularProgressIndicator(),
-      ));
-    }
-
-    return Scaffold(
-      backgroundColor: Colors.blueGrey,
-      appBar: AppBar(
-        title: Center(child: Text('Pothole and Crack Reporting')),
-        backgroundColor: Colors.blueGrey[900],
+    return new Container(
+      height: 140.0,
+      padding: new EdgeInsets.only(top: statusBarHeight),
+      child: new Center(
+        child: new Text(title,
+            style: const TextStyle(
+                color: Colors.white,
+                fontFamily: 'Simplifica',
+                fontWeight: FontWeight.w600,
+                fontSize: 36.0)),
       ),
-      floatingActionButton: FloatingActionButton(
-        child: Icon(Icons.image),
-        tooltip: "Report Issue",
-        onPressed: selectFromImagePicker,
+      decoration: new BoxDecoration(
+        boxShadow: [new BoxShadow(blurRadius: 50.0)],
+        borderRadius: new BorderRadius.vertical(
+          bottom:
+              new Radius.elliptical(MediaQuery.of(context).size.width, 75.0),
+        ),
+        gradient: new LinearGradient(
+          colors: [Colors.blueGrey[500], Colors.blueGrey[800]],
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          stops: [0.1, 0.9],
+          tileMode: TileMode.clamp,
+        ),
       ),
-      body: Stack(
-        children: stackChildren,
+    );
+  }
+}
+
+class ButtonList extends StatelessWidget {
+  void switchScreen(str, context) => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => UploadPage(url: str),
+        ),
+      );
+  @override
+  Widget build(BuildContext context) {
+    return new Flexible(
+      child: new Container(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            FlatButton(
+              padding: EdgeInsets.only(bottom: 30),
+              onPressed: () => switchScreen(
+                  "https://sriyaR.pythonanywhere.com/segment", context),
+              child: Text(
+                "Crack Segmentation",
+                style: const TextStyle(
+                  color: Colors.blueGrey,
+                  fontFamily: 'Simplifica',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 40,
+                ),
+              ),
+            ),
+            FlatButton(
+              padding: EdgeInsets.only(top: 30),
+              child: Text(
+                "Pothole Detection",
+                style: const TextStyle( 
+                  color: Colors.blueGrey,
+                  fontFamily: 'Simplifica',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 40,
+                ),
+              ),
+              onPressed: () => switchScreen(
+                  "https://sriyaR.pythonanywhere.com/detect/rcnn", context),
+            ),
+          ],
+        ),
       ),
     );
   }
