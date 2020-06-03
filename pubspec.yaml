@@ -25,3 +25,5 @@ flutter:
     - assets/model/UNet_25_Crack.tflite
     - assets/model/detect.tflite
     - assets/model/ssdlabels.txt
+    - assets/loading.gif
+    - assets/transparent.jpeg
